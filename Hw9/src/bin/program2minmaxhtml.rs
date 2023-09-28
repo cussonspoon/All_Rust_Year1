@@ -99,9 +99,6 @@ fn load_layers<R: Read>(rdr: R) -> Vec<Layer> {
 fn save_areas_as_html(output_file: &str, areas: Vec<Area>) -> Result<(), Box<dyn Error>> {
     let mut html_content = String::new();
 
-    html_content.push_str("<html><head><title>Layer Data</title></head><body>");
-    html_content.push_str("<h1>Layer Data</h1>");
-    
     html_content.push_str("<style>");
     html_content.push_str("table {border-collapse: collapse; width: 50%; margin: 20px auto;}");
     html_content.push_str("th, td {border: 1px solid black; padding: 8px; text-align: left;}");
