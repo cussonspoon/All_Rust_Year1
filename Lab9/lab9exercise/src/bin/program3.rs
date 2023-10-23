@@ -1,0 +1,118 @@
+use rand::Rng;
+use csv::Writer;
+use std::{fs::File, io::Write};
+use clap::{ App, Arg };
+use std::error::Error;
+
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+struct Layer {
+    name: String,
+    color: String,
+    points: Vec<Point>,
+}
+
+fn gen_layer_list<R: Rng>(rng: &mut R, n: i32) -> Vec<Layer> {
+    let mut result2: Vec<Layer> = Vec::new();
+    let j = n + 1;
+
+    for i in 1..j {
+        let mut result: Vec<Point> = Vec::new();
+        let k = rng.gen_range(0..=n);
+        for _ in 0..k {
+            let x = rng.gen_range(-250..=250);
+            let y = rng.gen_range(-250..=250);
+            result.push(Point { x, y });
+        }
+
+        let color = format!(
+            "#{:02X}{:02X}{:02X}{:02X}",
+            rng.gen_range(0..=255),
+            rng.gen_range(0..=255),
+            rng.gen_range(0..=255),
+            rng.gen_range(0..=255)
+        );
+
+        result2.push(Layer {
+            name: format!("Layer {}", i),
+            color,
+            points: result,
+        });
+    }
+
+    result2
+}
+
+fn save_points<W: std::io::Write>(writer: W, layers: Vec<Layer>) -> Result<(), Box<dyn Error>> {
+    let mut wtr = Writer::from_writer(writer);
+
+    for layer in &layers {
+        let name = &layer.name;
+        let color = &layer.color;
+        let points: Vec<String> = layer.points
+            .iter()
+            .map(|point| format!("{},{}", point.x, point.y))
+            .collect();
+
+        wtr.write_record(&[name, color, &points.join(",")])?;
+    }
+    wtr.flush()?;
+    Ok(())
+}
+
+fn generate_svg(layers: &Vec<Layer>) -> String {
+    let mut svg = String::from("<svg width=\"500\" height=\"500\" xmlns=\"http://www.w3.org/2000/svg\">\n");
+    svg.push_str("<rect width=\"100%\" height=\"100%\" fill=\"#EEEEEE\" />\n");
+    
+    for (index, layer) in layers.iter().enumerate() {
+        svg.push_str(&format!("<circle cx=\"250\" cy=\"250\" r=\"250\" stroke=\"black\" stroke-width=\"2\" fill=\"none\" />\n"));
+        for point in &layer.points {
+            svg.push_str(&format!("<circle cx=\"{}\" cy=\"{}\" r=\"10\" fill=\"{}\" />\n", point.x + 250, point.y + 250, layer.color));
+        }
+    }
+
+    svg.push_str("</svg>");
+    svg
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let matches = App::new("Create Layers and Colors")
+        .version("1.0")
+        .author("SaveSpoon")
+        .about("Creating layers and colors")
+        .arg(
+            Arg::with_name("Layers")
+                .short("l")
+                .long("Layers")
+                .value_name("n")
+                .help("Define how many layers the output should have")
+                .required(true)
+                .takes_value(true)
+        )
+        .arg(
+            Arg::with_name("output")
+                .short("o")
+                .long("output")
+                .value_name("OUTPUT_FILE")
+                .help("Sets the output SVG file")
+                .required(true)
+                .takes_value(true)
+        )
+        .get_matches();
+
+    let n_arg = matches.value_of("Layers").unwrap();
+    let n: i32 = n_arg.parse()?;
+    let output_name = matches.value_of("output").unwrap();
+
+    let mut rng = rand::thread_rng();
+    let layer_list = gen_layer_list(&mut rng, n);
+
+    let svg_content = generate_svg(&layer_list);
+    let mut output_file = File::create(output_name)?;
+    output_file.write_all(svg_content.as_bytes())?;
+
+    Ok(())
+}
