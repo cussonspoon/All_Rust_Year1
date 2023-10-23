@@ -1,0 +1,20 @@
+[package]
+name = "lab11exercise"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = "2.33"
+num = "0.4"
+regex = "1"
+once_cell = "1"
+svg = "0.5"
+image = "0.23"
+hex = "0.4.2"
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "2"
+rand = "0.8"
