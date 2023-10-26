@@ -2,6 +2,7 @@ pub mod lib {
     use serde::{Deserialize, Serialize};
     #[derive(Serialize, Deserialize, Clone)]
     pub struct Transaction {
+        pub count: u32,
         pub name: String,
         pub amount: f64,
         pub date: String,
@@ -10,6 +11,7 @@ pub mod lib {
     }
     #[derive(Clone, Serialize, Deserialize)]
     pub struct Budget {
+        pub count: u32,
         pub category: String,
         pub amount: f64,
     }
