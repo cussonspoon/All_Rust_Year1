@@ -213,25 +213,26 @@ fn view_transactions(
             print_transaction(transaction, true);
         }
         let mut category_incomes: std::collections::HashMap<String, f64> =
-        std::collections::HashMap::new();
-    
+            std::collections::HashMap::new();
+
         for transaction in transactions.iter().filter(|t| t.is_income) {
-        let transaction_category = transaction.category.trim().to_lowercase();
-        let income = transaction.amount;
-        let total_income = category_incomes
-        .entry(transaction_category.clone())
-        .or_insert(0.0);
-    *total_income += income;
-
-
+            let transaction_category = transaction.category.trim().to_lowercase();
+            let income = transaction.amount;
+            let total_income = category_incomes
+                .entry(transaction_category.clone())
+                .or_insert(0.0);
+            *total_income += income;
+        }
+        println!("{style_underline}{style_bold}Total Income by Category{style_reset}:");
+        println!("");
+        for (category, total_income) in &category_incomes {
+            println!(
+                "{style_bold}{}{color_reset}: {color_green}{}{color_reset}",
+                category, total_income
+            );
+        }
     }
-    println!("{style_underline}{style_bold}Total Income by Category{style_reset}:");
-    println!("");
-    for (category, total_income) in &category_incomes {
-        println!("{style_bold}{}{color_reset}: {color_green}{}{color_reset}", category, total_income);
-    }
-}
-    
+
     fn view_expense_transactions(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budget>) {
         println!("{color_reset}================================================================================================");
         println!("{style_underline}{color_red}Expense Transactions{color_reset}{style_reset}");
@@ -273,7 +274,10 @@ fn view_transactions(
                 budget.category
             );
             println!("Budget Amount: {color_blue}{}{color_reset}", budget.amount);
-            println!("Total Expenses: {style_reset}{color_red}{}{color_reset}", total_expense);
+            println!(
+                "Total Expenses: {style_reset}{color_red}{}{color_reset}",
+                total_expense
+            );
 
             let remaining_budget = budget.amount + total_expense;
             if remaining_budget >= 0.0 {
@@ -287,7 +291,7 @@ fn view_transactions(
                     remaining_budget
                 );
             }
-                    println!("");
+            println!("");
         }
         println!("{color_reset}================================================================================================");
     }
@@ -371,7 +375,7 @@ fn view_transactions(
 }
 
 fn set_and_display_budgets(budgets: &Vec<lib::Budget>) -> Vec<lib::Budget> {
-    let mut count = budgets.len() as u32+1;
+    let mut count = budgets.len() as u32 + 1;
     let mut updated_budgets = budgets.clone(); // Make a copy of the existing budgets
     for (index, budget) in updated_budgets.iter().enumerate() {
         println!("");
@@ -380,7 +384,6 @@ fn set_and_display_budgets(budgets: &Vec<lib::Budget>) -> Vec<lib::Budget> {
         println!("Amount: {color_green}{}{color_reset}", budget.amount);
     }
     loop {
-
         let choice = get_user_input("Enter budget category or type 'done' to exit: ");
 
         if choice.trim().to_lowercase() == "done" {
@@ -393,7 +396,11 @@ fn set_and_display_budgets(budgets: &Vec<lib::Budget>) -> Vec<lib::Budget> {
             .parse()
             .expect("Invalid amount");
 
-        let budget = lib::Budget {count, category, amount };
+        let budget = lib::Budget {
+            count,
+            category,
+            amount,
+        };
         updated_budgets.push(budget);
         count += 1;
 
@@ -419,22 +426,25 @@ fn evaluate_total(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budge
     println!("{color_blue}=={color_reset} {style_underline}{style_bold}Total Summary{style_reset} {color_blue}=={color_reset}");
     println!("");
     let mut category_incomes: std::collections::HashMap<String, f64> =
-    std::collections::HashMap::new();
+        std::collections::HashMap::new();
 
     for transaction in transactions.iter().filter(|t| t.is_income) {
-    let transaction_category = transaction.category.trim().to_lowercase();
-    let income = transaction.amount;
+        let transaction_category = transaction.category.trim().to_lowercase();
+        let income = transaction.amount;
 
-    // Update or insert the category's total income
-    let total_income = category_incomes
-        .entry(transaction_category.clone())
-        .or_insert(0.0);
-    *total_income += income;
-}
+        // Update or insert the category's total income
+        let total_income = category_incomes
+            .entry(transaction_category.clone())
+            .or_insert(0.0);
+        *total_income += income;
+    }
     println!("{style_underline}{style_bold}Total Income by Category{style_reset}:");
     println!("");
     for (category, total_income) in &category_incomes {
-        println!("{style_bold}{}{color_reset}: {color_green}{}{color_reset}", category, total_income);
+        println!(
+            "{style_bold}{}{color_reset}: {color_green}{}{color_reset}",
+            category, total_income
+        );
     }
     println!("");
     println!("{style_bold}{style_underline}Budgets summary{style_reset}");
@@ -481,14 +491,29 @@ fn evaluate_total(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budge
         .map(|t| t.amount)
         .sum();
     let net_money = total_income + total_expense;
-    println!("{style_underline}{color_green}Total Income{style_reset}: {color_green}{}{color_reset}", total_income);
-    println!("{style_underline}{color_red}Total Expense{style_reset}: {color_red}{}{color_reset}", total_expense);
+    println!(
+        "{style_underline}{color_green}Total Income{style_reset}: {color_green}{}{color_reset}",
+        total_income
+    );
+    println!(
+        "{style_underline}{color_red}Total Expense{style_reset}: {color_red}{}{color_reset}",
+        total_expense
+    );
     if net_money > 0.0 {
-        println!("{style_underline}{color_green}Net Money{style_reset}: {color_green}{}{color_reset}", net_money);
+        println!(
+            "{style_underline}{color_green}Net Money{style_reset}: {color_green}{}{color_reset}",
+            net_money
+        );
     } else if net_money == 0.0 {
-        println!("{style_underline}{color_black}Net Money{style_reset}: {color_black}{}{color_reset}", net_money);
+        println!(
+            "{style_underline}{color_black}Net Money{style_reset}: {color_black}{}{color_reset}",
+            net_money
+        );
     } else {
-        println!("{style_underline}{color_red}Net Money{style_reset}:{color_red}{}{color_reset}", net_money);
+        println!(
+            "{style_underline}{color_red}Net Money{style_reset}:{color_red}{}{color_reset}",
+            net_money
+        );
     }
 }
 
@@ -619,28 +644,32 @@ fn edit_transactions(
                 println!("Category: {}", budget.category);
                 println!("Amount: {color_green}{}{color_reset}", budget.amount);
             }
-        
+
             println!("Enter the number of the budget category you want to edit: ");
             let index_input = get_user_input("Budget number: ").trim().parse::<usize>();
-        
+
             if let Ok(index) = index_input {
                 if index <= budgets.len() && index > 0 {
                     let index = index - 1; // Adjust the index to match the vector's indexing
                     let budget = &mut budgets[index]; // Access the budget by index
-        
+
                     println!("{color_reset}================================================================================================");
                     println!("{style_underline}{style_bold}Editing Budget Name{style_reset}:{color_blue}{}{color_reset}", budget.category);
                     println!("Amount: {color_green}{}{color_reset}", budget.amount);
-                    println!("What do you want to edit? (name/amount)\n{style_bold}(n/a){style_reset}: ");
+                    println!(
+                        "What do you want to edit? (name/amount)\n{style_bold}(n/a){style_reset}: "
+                    );
                     let choice = get_user_input("").trim().to_ascii_lowercase();
-        
+
                     match choice.as_str() {
                         "n" => {
                             let new_name = get_user_input("Enter the new name: ");
                             budget.category = new_name.trim().to_string();
                         }
                         "a" => {
-                            let new_amount_input = get_user_input("Enter the new amount: ").trim().parse::<f64>();
+                            let new_amount_input = get_user_input("Enter the new amount: ")
+                                .trim()
+                                .parse::<f64>();
                             if let Ok(new_amount) = new_amount_input {
                                 budget.amount = new_amount;
                             } else {
@@ -657,7 +686,8 @@ fn edit_transactions(
             } else {
                 println!("Invalid input. Please enter a valid index.");
             }
-        } _ => {
+        }
+        _ => {
             println!("Invalid edit type. Please specify 'transaction(t)' or 'budget(b)'.");
         }
     }
