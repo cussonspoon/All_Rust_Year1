@@ -43,7 +43,9 @@ fn main() {
         println!("");
         println!("{style_bold}6. Evaluate total{style_reset}");
         println!("");
-        println!("{color_black}{style_underline}7. Save and Exit{color_reset}{style_reset}");
+        println!("{color_cyan}7. Export as HTML{color_reset}");
+        println!("");
+        println!("{color_black}{style_underline}8. Save and Exit{color_reset}{style_reset}");
         println!("");
         println!("{color_blue}***************************************************************************************************************{color_reset}");
 
@@ -76,6 +78,18 @@ fn main() {
                 evaluate_total(&user.transactions, &user.budgets);
             }
             "7" => {
+                loop {
+                    println!("Do you want to export by day, month, or year\n{style_bold}(d/m/y){style_reset} or {style_bold}e{style_reset} to exit");
+                    let export_type = get_user_input("").trim().to_ascii_lowercase();
+                    if export_type == "e"{
+                        break;
+                    }
+                    export_as_html(&user.transactions, &user.budgets, &export_type)
+               }
+            }
+            
+
+            "8" => {
                 app_state.user.transactions.clear();
                 app_state.user.budgets.clear();
                 app_state
@@ -87,6 +101,8 @@ fn main() {
                 println!("Goodbye!");
                 break;
             }
+
+            
             _ => {
                 println!("Invalid choice. Please try again.");
             }
@@ -692,4 +708,250 @@ fn edit_transactions(
         }
     }
 }
-//
+
+fn export_as_html(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budget>, export_type : &str) {
+    let mut filename = String::default();
+    let mut export_data = String::new();
+    let mut total_income = 0.0;
+    let mut total_expense = 0.0;
+    match export_type.trim() {
+        "d" => {
+            // Extract and list all available unique dates
+            let unique_dates: Vec<String> = transactions.iter()
+                .map(|transaction| transaction.date.trim().to_string())
+                .collect();
+            
+            // Remove duplicates and sort
+            let mut unique_dates = unique_dates.into_iter().collect::<std::collections::HashSet<String>>()
+                .into_iter().collect::<Vec<String>>();
+            unique_dates.sort();
+            
+            println!("Available dates to choose from:");
+            for (index, date) in unique_dates.iter().enumerate() {
+                println!("{}: {}", index + 1, date);
+            }
+            
+            println!("Enter the index of the date you want to export: ");
+            let date_index = get_user_input("").trim().parse::<usize>();
+            
+            match date_index {
+                Ok(index) => {
+                    if index > 0 && index <= unique_dates.len() {
+                        let selected_date = &unique_dates[index - 1];
+                        filename = format!("export_{}.html", selected_date.replace("/", "_"));                    
+                        export_data.push_str("<html>\n<head>\n<title>Income and Expense Report</title>\n");
+                        export_data.push_str("<style>\n");
+                        export_data.push_str("table {\nborder-collapse: collapse;\nwidth: 100%;\n}\n");
+                        export_data.push_str("table, th, td {\nborder: 1px solid black;\n}\n");
+                        export_data.push_str("th, td {\npadding: 10px;\ntext-align: left;\n}\n");
+                        export_data.push_str("th {\nbackground-color: #333;\ncolor: white;\n}\n");
+                        export_data.push_str("tr:nth-child(odd) {\nbackground-color: #f2f2f2;\n}\n");
+                        export_data.push_str("tr:nth-child(even) {\nbackground-color: #ddd;\n}\n");
+                        export_data.push_str("</style>\n"); // Add the style section here
+                        export_data.push_str("</head>\n<body>\n");
+                        export_data.push_str("<h1>Transactions for Date: ");
+                        export_data.push_str(selected_date);
+                        export_data.push_str("</h1>\n");
+                        export_data.push_str("<table>\n<tr><th>Name</th><th>Amount</th><th>Date</th><th>Category</th></tr>\n");
+            
+                        for transaction in transactions.iter() {
+                            if transaction.date.trim() == *selected_date {
+                                export_data.push_str("<tr>");
+                                export_data.push_str(&format!("<td>{}</td>", transaction.name));
+                                export_data.push_str(&format!("<td>{}</td>", transaction.amount));
+                                export_data.push_str(&format!("<td>{}</td>", transaction.date));
+                                export_data.push_str(&format!("<td>{}</td>", transaction.category));
+                                export_data.push_str("</tr>\n");
+                                if transaction.is_income {
+                                    total_income += transaction.amount;
+                                } else {
+                                    total_expense += transaction.amount;
+                                }
+                            }
+                        }
+                        export_data.push_str("<tr>");
+                        export_data.push_str("<td>Net amount (Total income - Total expense)</td>");
+                        export_data.push_str(&format!("<td>{} - {} = {}", total_income, total_expense.abs(), (total_income - total_expense)));
+                        export_data.push_str("</tr>\n");
+                        export_data.push_str("</table>\n");
+                    } else {
+                        println!("Invalid date selection.");
+                        return;
+                    }
+                }
+                Err(_) => {
+                    println!("Invalid input. Please enter a valid number.");
+                    return;
+                }
+            }
+        }
+        
+        "m" => {
+            // Extract and list all available unique months (mm/yyyy)
+            let unique_months: Vec<String> = transactions.iter()
+                .map(|transaction| {
+                    let date_parts: Vec<&str> = transaction.date.trim().split('/').collect();
+                    if date_parts.len() >= 2 {
+                        format!("{}/{}", date_parts[1], date_parts[2])
+                    } else {
+                        "".to_string()
+                    }
+                })
+                .collect();
+            
+            // Remove duplicates and sort
+            let mut unique_months = unique_months.into_iter().collect::<std::collections::HashSet<String>>()
+                .into_iter().collect::<Vec<String>>();
+            unique_months.sort();
+            
+            println!("Available months to choose from:");
+            for (index, month) in unique_months.iter().enumerate() {
+                println!("{}: {}", index + 1, month);
+            }
+            
+            println!("Enter the number of the month you want to export (mm/yyyy): ");
+            let month_index = get_user_input("").trim().parse::<usize>();
+            
+            match month_index {
+                Ok(index) => {
+                    if index > 0 && index <= unique_months.len() {
+                        let selected_month = &unique_months[index - 1];
+                        filename = format!("export_{}.html", selected_month.replace("/", "_"));                    
+                        export_data.push_str("<html>\n<head>\n<title>Income and Expense Report</title>\n");
+                        export_data.push_str("<style>\n");
+                        export_data.push_str("table {\nborder-collapse: collapse;\nwidth: 100%;\n}\n");
+                        export_data.push_str("table, th, td {\nborder: 1px solid black;\n}\n");
+                        export_data.push_str("th, td {\npadding: 10px;\ntext-align: left;\n}\n");
+                        export_data.push_str("th {\nbackground-color: #333;\ncolor: white;\n}\n");
+                        export_data.push_str("tr:nth-child(odd) {\nbackground-color: #f2f2f2;\n}\n");
+                        export_data.push_str("tr:nth-child(even) {\nbackground-color: #ddd;\n}\n");
+                        export_data.push_str("</style>\n"); // Add the style section here
+                        export_data.push_str("</head>\n<body>\n");
+                        export_data.push_str("<h1>Transactions for Month: ");
+                        export_data.push_str(selected_month);
+                        export_data.push_str("</h1>\n");
+                        export_data.push_str("<table>\n<tr><th>Name</th><th>Amount</th><th>Date</th><th>Category</th></tr>\n");
+            
+                        for transaction in transactions.iter() {
+                            let transaction_month = if transaction.date.trim().contains(selected_month) {
+                                export_data.push_str("<tr>");
+                                export_data.push_str(&format!("<td>{}</td>", transaction.name));
+                                export_data.push_str(&format!("<td>{}</td>", transaction.amount));
+                                export_data.push_str(&format!("<td>{}</td>", transaction.date));
+                                export_data.push_str(&format!("<td>{}</td>", transaction.category));
+                                export_data.push_str("</tr>\n");
+                                if transaction.is_income {
+                                    total_income += transaction.amount;
+                                } else {
+                                    total_expense += transaction.amount;
+                                }
+                            };
+                        }
+                        export_data.push_str("<tr>");
+                        export_data.push_str("<td>Net amount (Total income - Total expense)</td>");
+                        export_data.push_str(&format!("<td>{} - {} = {}", total_income, total_expense.abs(), (total_income - total_expense)));
+                        export_data.push_str("</tr>\n");
+                        export_data.push_str("</table>\n");
+                    } else {
+                        println!("Invalid month selection.");
+                        return;
+                    }
+                }
+                Err(_) => {
+                    println!("Invalid input. Please enter a valid number.");
+                    return;
+                }
+            }
+        }
+        
+        "y" => {
+            // Extract and list all available unique years (yyyy)
+            let unique_years: Vec<String> = transactions.iter()
+                .map(|transaction| {
+                    let date_parts: Vec<&str> = transaction.date.trim().split('/').collect();
+                    if date_parts.len() >= 3 {
+                        date_parts[2].to_string()
+                    } else {
+                        "".to_string()
+                    }
+                })
+                .collect();
+            
+            // Remove duplicates and sort
+            let mut unique_years = unique_years.into_iter().collect::<std::collections::HashSet<String>>()
+                .into_iter().collect::<Vec<String>>();
+            unique_years.sort();
+            
+            println!("Available years to choose from:");
+            for (index, year) in unique_years.iter().enumerate() {
+                println!("{}: {}", index + 1, year);
+            }
+            
+            println!("Enter the index of the year you want to export: ");
+            let year_index = get_user_input("").trim().parse::<usize>();
+            
+            match year_index {
+                Ok(index) => {
+                    if index > 0 && index <= unique_years.len() {
+                        let selected_year = &unique_years[index - 1];
+                        filename = format!("export_{}.html", selected_year);                    
+                        export_data.push_str("<html>\n<head>\n<title>Income and Expense Report</title>\n");
+                        export_data.push_str("<style>\n");
+                        export_data.push_str("table {\nborder-collapse: collapse;\nwidth: 100%;\n}\n");
+                        export_data.push_str("table, th, td {\nborder: 1px solid black;\n}\n");
+                        export_data.push_str("th, td {\npadding: 10px;\ntext-align: left;\n}\n");
+                        export_data.push_str("th {\nbackground-color: #333;\ncolor: white;\n}\n");
+                        export_data.push_str("tr:nth-child(odd) {\nbackground-color: #f2f2f2;\n}\n");
+                        export_data.push_str("tr:nth-child(even) {\nbackground-color: #ddd;\n}\n");
+                        export_data.push_str("</style>\n"); // Add the style section here
+                        export_data.push_str("</head>\n<body>\n");
+                        export_data.push_str("<h1>Transactions for Year: ");
+                        export_data.push_str(selected_year);
+                        export_data.push_str("</h1>\n");
+                        export_data.push_str("<table>\n<tr><th>Name</th><th>Amount</th><th>Date</th><th>Category</th></tr>\n");
+            
+                        for transaction in transactions.iter() {
+                            if transaction.date.trim().ends_with(selected_year) {
+                                export_data.push_str("<tr>");
+                                export_data.push_str(&format!("<td>{}</td>", transaction.name));
+                                export_data.push_str(&format!("<td>{}</td>", transaction.amount));
+                                export_data.push_str(&format!("<td>{}</td>", transaction.date));
+                                export_data.push_str(&format!("<td>{}</td>", transaction.category));
+                                export_data.push_str("</tr>\n");
+                                if transaction.is_income {
+                                    total_income += transaction.amount;
+                                } else {
+                                    total_expense += transaction.amount;
+                                }
+                            }
+                        }
+                        export_data.push_str("<tr>");
+                        export_data.push_str("<td>Net amount (Total income - Total expense)</td>");
+                        export_data.push_str(&format!("<td>{} - {} = {}", total_income, total_expense.abs(), (total_income - total_expense)));
+                        export_data.push_str("</tr>\n");
+                        export_data.push_str("</table>\n");
+                    } else {
+                        println!("Invalid year selection.");
+                        return;
+                    }
+                }
+                Err(_) => {
+                    println!("Invalid input. Please enter a valid number.");
+                    return;
+                }
+            }
+        }
+        _ => {
+            println!("Invalid input, must be day(d), month(m), year(y)")
+        }
+
+    }
+    export_data.push_str("</body>\n</html>");
+
+    println!("ayyo = {}", filename);
+    match fs::write(&filename, export_data) {
+        Ok(_) => println!("Data exported to {}", filename),
+        Err(err) => eprintln!("Failed to export data: {}", err),
+    }
+    return
+}
