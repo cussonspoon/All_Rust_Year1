@@ -77,17 +77,14 @@ fn main() {
             "6" => {
                 evaluate_total(&user.transactions, &user.budgets);
             }
-            "7" => {
-                loop {
-                    println!("Do you want to export by day, month, or year\n{style_bold}(d/m/y){style_reset} or {style_bold}e{style_reset} to exit");
-                    let export_type = get_user_input("").trim().to_ascii_lowercase();
-                    if export_type == "e"{
-                        break;
-                    }
-                    export_as_html(&user.transactions, &user.budgets, &export_type)
-               }
-            }
-            
+            "7" => loop {
+                println!("Do you want to export by day, month, or year\n{style_bold}(d/m/y){style_reset} or {style_bold}e{style_reset} to exit");
+                let export_type = get_user_input("").trim().to_ascii_lowercase();
+                if export_type == "e" {
+                    break;
+                }
+                export_as_html(&user.transactions, &user.budgets, &export_type)
+            },
 
             "8" => {
                 app_state.user.transactions.clear();
@@ -102,7 +99,6 @@ fn main() {
                 break;
             }
 
-            
             _ => {
                 println!("Invalid choice. Please try again.");
             }
@@ -253,16 +249,13 @@ fn view_transactions(
         println!("{color_reset}================================================================================================");
         println!("{style_underline}{color_red}Expense Transactions{color_reset}{style_reset}");
 
-        // Create a HashMap to accumulate expenses by category
         let mut category_expenses: std::collections::HashMap<String, f64> =
             std::collections::HashMap::new();
 
-        // Accumulate expenses for each category
         for transaction in transactions.iter().filter(|t| !t.is_income) {
             let transaction_category = transaction.category.trim().to_lowercase();
             let expense = transaction.amount;
 
-            // Update or insert the category's total expense
             let total_expense = category_expenses
                 .entry(transaction_category.clone())
                 .or_insert(0.0);
@@ -271,7 +264,6 @@ fn view_transactions(
             print_transaction(transaction, false);
         }
 
-        // Display budget information for each category
         println!("{color_reset}================================================================================================");
         println!("{style_underline}{style_bold}Budget Summary{style_reset}");
         println!("");
@@ -328,6 +320,27 @@ fn view_transactions(
             }
         }
 
+        println!("{color_reset}================================================================================================");
+        let mut category_incomes: std::collections::HashMap<String, f64> =
+            std::collections::HashMap::new();
+
+        for transaction in transactions.iter().filter(|t| t.is_income) {
+            let transaction_category = transaction.category.trim().to_lowercase();
+            let income = transaction.amount;
+            let total_income = category_incomes
+                .entry(transaction_category.clone())
+                .or_insert(0.0);
+            *total_income += income;
+        }
+        println!("{style_underline}{style_bold}Total Income by Category{style_reset}:");
+        println!("");
+        for (category, total_income) in &category_incomes {
+            println!(
+                "{style_bold}{}{color_reset}: {color_green}{}{color_reset}",
+                category, total_income
+            );
+        }
+        println!("");
         println!("{color_reset}================================================================================================");
         println!("{style_underline}{style_bold}Budget Summary{style_reset}");
         println!("");
@@ -392,7 +405,7 @@ fn view_transactions(
 
 fn set_and_display_budgets(budgets: &Vec<lib::Budget>) -> Vec<lib::Budget> {
     let mut count = budgets.len() as u32 + 1;
-    let mut updated_budgets = budgets.clone(); // Make a copy of the existing budgets
+    let mut updated_budgets = budgets.clone();
     for (index, budget) in updated_budgets.iter().enumerate() {
         println!("");
         println!("{style_bold}Budget #{}{style_reset}", budget.count);
@@ -448,7 +461,6 @@ fn evaluate_total(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budge
         let transaction_category = transaction.category.trim().to_lowercase();
         let income = transaction.amount;
 
-        // Update or insert the category's total income
         let total_income = category_incomes
             .entry(transaction_category.clone())
             .or_insert(0.0);
@@ -586,7 +598,7 @@ fn edit_transactions(
                         print_transaction(transaction, false);
                     }
                 }
-                let index_input = get_user_input("Enter the transaction number: ");
+                let index_input = get_user_input("Enter the transaction number you want to edit: ");
 
                 if let Ok(index) = index_input.trim().parse::<usize>() {
                     if index <= transactions.len() && index > 0 {
@@ -666,8 +678,8 @@ fn edit_transactions(
 
             if let Ok(index) = index_input {
                 if index <= budgets.len() && index > 0 {
-                    let index = index - 1; // Adjust the index to match the vector's indexing
-                    let budget = &mut budgets[index]; // Access the budget by index
+                    let index = index - 1;
+                    let budget = &mut budgets[index];
 
                     println!("{color_reset}================================================================================================");
                     println!("{style_underline}{style_bold}Editing Budget Name{style_reset}:{color_blue}{}{color_reset}", budget.category);
@@ -709,51 +721,60 @@ fn edit_transactions(
     }
 }
 
-fn export_as_html(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budget>, export_type : &str) {
+fn export_as_html(
+    transactions: &Vec<lib::Transaction>,
+    budgets: &Vec<lib::Budget>,
+    export_type: &str,
+) {
     let mut filename = String::default();
     let mut export_data = String::new();
     let mut total_income = 0.0;
     let mut total_expense = 0.0;
     match export_type.trim() {
         "d" => {
-            // Extract and list all available unique dates
-            let unique_dates: Vec<String> = transactions.iter()
+            let unique_dates: Vec<String> = transactions
+                .iter()
                 .map(|transaction| transaction.date.trim().to_string())
                 .collect();
-            
-            // Remove duplicates and sort
-            let mut unique_dates = unique_dates.into_iter().collect::<std::collections::HashSet<String>>()
-                .into_iter().collect::<Vec<String>>();
+
+            let mut unique_dates = unique_dates
+                .into_iter()
+                .collect::<std::collections::HashSet<String>>()
+                .into_iter()
+                .collect::<Vec<String>>();
             unique_dates.sort();
-            
+
             println!("Available dates to choose from:");
             for (index, date) in unique_dates.iter().enumerate() {
                 println!("{}: {}", index + 1, date);
             }
-            
+
             println!("Enter the index of the date you want to export: ");
             let date_index = get_user_input("").trim().parse::<usize>();
-            
+
             match date_index {
                 Ok(index) => {
                     if index > 0 && index <= unique_dates.len() {
                         let selected_date = &unique_dates[index - 1];
-                        filename = format!("export_{}.html", selected_date.replace("/", "_"));                    
-                        export_data.push_str("<html>\n<head>\n<title>Income and Expense Report</title>\n");
+                        filename = format!("export_{}.html", selected_date.replace("/", "_"));
+                        export_data
+                            .push_str("<html>\n<head>\n<title>Income and Expense Report</title>\n");
                         export_data.push_str("<style>\n");
-                        export_data.push_str("table {\nborder-collapse: collapse;\nwidth: 100%;\n}\n");
+                        export_data
+                            .push_str("table {\nborder-collapse: collapse;\nwidth: 100%;\n}\n");
                         export_data.push_str("table, th, td {\nborder: 1px solid black;\n}\n");
                         export_data.push_str("th, td {\npadding: 10px;\ntext-align: left;\n}\n");
                         export_data.push_str("th {\nbackground-color: #333;\ncolor: white;\n}\n");
-                        export_data.push_str("tr:nth-child(odd) {\nbackground-color: #f2f2f2;\n}\n");
+                        export_data
+                            .push_str("tr:nth-child(odd) {\nbackground-color: #f2f2f2;\n}\n");
                         export_data.push_str("tr:nth-child(even) {\nbackground-color: #ddd;\n}\n");
-                        export_data.push_str("</style>\n"); // Add the style section here
+                        export_data.push_str("</style>\n");
                         export_data.push_str("</head>\n<body>\n");
                         export_data.push_str("<h1>Transactions for Date: ");
                         export_data.push_str(selected_date);
                         export_data.push_str("</h1>\n");
                         export_data.push_str("<table>\n<tr><th>Name</th><th>Amount</th><th>Date</th><th>Category</th></tr>\n");
-            
+
                         for transaction in transactions.iter() {
                             if transaction.date.trim() == *selected_date {
                                 export_data.push_str("<tr>");
@@ -771,7 +792,12 @@ fn export_as_html(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budge
                         }
                         export_data.push_str("<tr>");
                         export_data.push_str("<td>Net amount (Total income - Total expense)</td>");
-                        export_data.push_str(&format!("<td>{} - {} = {}", total_income, total_expense.abs(), (total_income - total_expense)));
+                        export_data.push_str(&format!(
+                            "<td>{} - {} = {}",
+                            total_income,
+                            total_expense.abs(),
+                            (total_income + total_expense)
+                        ));
                         export_data.push_str("</tr>\n");
                         export_data.push_str("</table>\n");
                     } else {
@@ -785,10 +811,10 @@ fn export_as_html(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budge
                 }
             }
         }
-        
+
         "m" => {
-            // Extract and list all available unique months (mm/yyyy)
-            let unique_months: Vec<String> = transactions.iter()
+            let unique_months: Vec<String> = transactions
+                .iter()
                 .map(|transaction| {
                     let date_parts: Vec<&str> = transaction.date.trim().split('/').collect();
                     if date_parts.len() >= 2 {
@@ -798,58 +824,71 @@ fn export_as_html(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budge
                     }
                 })
                 .collect();
-            
-            // Remove duplicates and sort
-            let mut unique_months = unique_months.into_iter().collect::<std::collections::HashSet<String>>()
-                .into_iter().collect::<Vec<String>>();
+
+            let mut unique_months = unique_months
+                .into_iter()
+                .collect::<std::collections::HashSet<String>>()
+                .into_iter()
+                .collect::<Vec<String>>();
             unique_months.sort();
-            
+
             println!("Available months to choose from:");
             for (index, month) in unique_months.iter().enumerate() {
                 println!("{}: {}", index + 1, month);
             }
-            
+
             println!("Enter the number of the month you want to export (mm/yyyy): ");
             let month_index = get_user_input("").trim().parse::<usize>();
-            
+
             match month_index {
                 Ok(index) => {
                     if index > 0 && index <= unique_months.len() {
                         let selected_month = &unique_months[index - 1];
-                        filename = format!("export_{}.html", selected_month.replace("/", "_"));                    
-                        export_data.push_str("<html>\n<head>\n<title>Income and Expense Report</title>\n");
+                        filename = format!("export_{}.html", selected_month.replace("/", "_"));
+                        export_data
+                            .push_str("<html>\n<head>\n<title>Income and Expense Report</title>\n");
                         export_data.push_str("<style>\n");
-                        export_data.push_str("table {\nborder-collapse: collapse;\nwidth: 100%;\n}\n");
+                        export_data
+                            .push_str("table {\nborder-collapse: collapse;\nwidth: 100%;\n}\n");
                         export_data.push_str("table, th, td {\nborder: 1px solid black;\n}\n");
                         export_data.push_str("th, td {\npadding: 10px;\ntext-align: left;\n}\n");
                         export_data.push_str("th {\nbackground-color: #333;\ncolor: white;\n}\n");
-                        export_data.push_str("tr:nth-child(odd) {\nbackground-color: #f2f2f2;\n}\n");
+                        export_data
+                            .push_str("tr:nth-child(odd) {\nbackground-color: #f2f2f2;\n}\n");
                         export_data.push_str("tr:nth-child(even) {\nbackground-color: #ddd;\n}\n");
-                        export_data.push_str("</style>\n"); // Add the style section here
+                        export_data.push_str("</style>\n");
                         export_data.push_str("</head>\n<body>\n");
                         export_data.push_str("<h1>Transactions for Month: ");
                         export_data.push_str(selected_month);
                         export_data.push_str("</h1>\n");
                         export_data.push_str("<table>\n<tr><th>Name</th><th>Amount</th><th>Date</th><th>Category</th></tr>\n");
-            
+
                         for transaction in transactions.iter() {
-                            let transaction_month = if transaction.date.trim().contains(selected_month) {
-                                export_data.push_str("<tr>");
-                                export_data.push_str(&format!("<td>{}</td>", transaction.name));
-                                export_data.push_str(&format!("<td>{}</td>", transaction.amount));
-                                export_data.push_str(&format!("<td>{}</td>", transaction.date));
-                                export_data.push_str(&format!("<td>{}</td>", transaction.category));
-                                export_data.push_str("</tr>\n");
-                                if transaction.is_income {
-                                    total_income += transaction.amount;
-                                } else {
-                                    total_expense += transaction.amount;
-                                }
-                            };
+                            let transaction_month =
+                                if transaction.date.trim().contains(selected_month) {
+                                    export_data.push_str("<tr>");
+                                    export_data.push_str(&format!("<td>{}</td>", transaction.name));
+                                    export_data
+                                        .push_str(&format!("<td>{}</td>", transaction.amount));
+                                    export_data.push_str(&format!("<td>{}</td>", transaction.date));
+                                    export_data
+                                        .push_str(&format!("<td>{}</td>", transaction.category));
+                                    export_data.push_str("</tr>\n");
+                                    if transaction.is_income {
+                                        total_income += transaction.amount;
+                                    } else {
+                                        total_expense += transaction.amount;
+                                    }
+                                };
                         }
                         export_data.push_str("<tr>");
                         export_data.push_str("<td>Net amount (Total income - Total expense)</td>");
-                        export_data.push_str(&format!("<td>{} - {} = {}", total_income, total_expense.abs(), (total_income - total_expense)));
+                        export_data.push_str(&format!(
+                            "<td>{} - {} = {}",
+                            total_income,
+                            total_expense.abs(),
+                            (total_income + total_expense)
+                        ));
                         export_data.push_str("</tr>\n");
                         export_data.push_str("</table>\n");
                     } else {
@@ -863,10 +902,10 @@ fn export_as_html(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budge
                 }
             }
         }
-        
+
         "y" => {
-            // Extract and list all available unique years (yyyy)
-            let unique_years: Vec<String> = transactions.iter()
+            let unique_years: Vec<String> = transactions
+                .iter()
                 .map(|transaction| {
                     let date_parts: Vec<&str> = transaction.date.trim().split('/').collect();
                     if date_parts.len() >= 3 {
@@ -876,40 +915,45 @@ fn export_as_html(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budge
                     }
                 })
                 .collect();
-            
-            // Remove duplicates and sort
-            let mut unique_years = unique_years.into_iter().collect::<std::collections::HashSet<String>>()
-                .into_iter().collect::<Vec<String>>();
+
+            let mut unique_years = unique_years
+                .into_iter()
+                .collect::<std::collections::HashSet<String>>()
+                .into_iter()
+                .collect::<Vec<String>>();
             unique_years.sort();
-            
+
             println!("Available years to choose from:");
             for (index, year) in unique_years.iter().enumerate() {
                 println!("{}: {}", index + 1, year);
             }
-            
+
             println!("Enter the index of the year you want to export: ");
             let year_index = get_user_input("").trim().parse::<usize>();
-            
+
             match year_index {
                 Ok(index) => {
                     if index > 0 && index <= unique_years.len() {
                         let selected_year = &unique_years[index - 1];
-                        filename = format!("export_{}.html", selected_year);                    
-                        export_data.push_str("<html>\n<head>\n<title>Income and Expense Report</title>\n");
+                        filename = format!("export_{}.html", selected_year);
+                        export_data
+                            .push_str("<html>\n<head>\n<title>Income and Expense Report</title>\n");
                         export_data.push_str("<style>\n");
-                        export_data.push_str("table {\nborder-collapse: collapse;\nwidth: 100%;\n}\n");
+                        export_data
+                            .push_str("table {\nborder-collapse: collapse;\nwidth: 100%;\n}\n");
                         export_data.push_str("table, th, td {\nborder: 1px solid black;\n}\n");
                         export_data.push_str("th, td {\npadding: 10px;\ntext-align: left;\n}\n");
                         export_data.push_str("th {\nbackground-color: #333;\ncolor: white;\n}\n");
-                        export_data.push_str("tr:nth-child(odd) {\nbackground-color: #f2f2f2;\n}\n");
+                        export_data
+                            .push_str("tr:nth-child(odd) {\nbackground-color: #f2f2f2;\n}\n");
                         export_data.push_str("tr:nth-child(even) {\nbackground-color: #ddd;\n}\n");
-                        export_data.push_str("</style>\n"); // Add the style section here
+                        export_data.push_str("</style>\n");
                         export_data.push_str("</head>\n<body>\n");
                         export_data.push_str("<h1>Transactions for Year: ");
                         export_data.push_str(selected_year);
                         export_data.push_str("</h1>\n");
                         export_data.push_str("<table>\n<tr><th>Name</th><th>Amount</th><th>Date</th><th>Category</th></tr>\n");
-            
+
                         for transaction in transactions.iter() {
                             if transaction.date.trim().ends_with(selected_year) {
                                 export_data.push_str("<tr>");
@@ -927,7 +971,12 @@ fn export_as_html(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budge
                         }
                         export_data.push_str("<tr>");
                         export_data.push_str("<td>Net amount (Total income - Total expense)</td>");
-                        export_data.push_str(&format!("<td>{} - {} = {}", total_income, total_expense.abs(), (total_income - total_expense)));
+                        export_data.push_str(&format!(
+                            "<td>{} - {} = {}",
+                            total_income,
+                            total_expense.abs(),
+                            (total_income + total_expense)
+                        ));
                         export_data.push_str("</tr>\n");
                         export_data.push_str("</table>\n");
                     } else {
@@ -944,14 +993,12 @@ fn export_as_html(transactions: &Vec<lib::Transaction>, budgets: &Vec<lib::Budge
         _ => {
             println!("Invalid input, must be day(d), month(m), year(y)")
         }
-
     }
     export_data.push_str("</body>\n</html>");
 
-    println!("ayyo = {}", filename);
     match fs::write(&filename, export_data) {
         Ok(_) => println!("Data exported to {}", filename),
         Err(err) => eprintln!("Failed to export data: {}", err),
     }
-    return
+    return;
 }
